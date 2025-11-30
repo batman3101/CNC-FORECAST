@@ -1,0 +1,4 @@
+# This directory contains:
+# - price_master.xlsx: 단가 마스터 Excel 파일
+# - history.db: 실적 및 forecast 히스토리 SQLite DB
+# - templates.db: 학습된 Excel 템플릿 DB
