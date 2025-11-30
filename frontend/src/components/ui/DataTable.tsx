@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react'
+import { useState, useMemo, useCallback, type ReactNode } from 'react'
 import { Input } from './Input'
 import { Button } from './Button'
 import {
@@ -54,7 +54,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
 
   // Get value from nested key like "user.name"
-  const getValue = (row: T, key: string): unknown => {
+  const getValue = useCallback((row: T, key: string): unknown => {
     const keys = key.split('.')
     let value: unknown = row
     for (const k of keys) {
@@ -65,7 +65,7 @@ export function DataTable<T extends Record<string, unknown>>({
       }
     }
     return value
-  }
+  }, [])
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -93,7 +93,7 @@ export function DataTable<T extends Record<string, unknown>>({
     })
 
     return result
-  }, [data, searchTerm, columnFilters, columns])
+  }, [data, searchTerm, columnFilters, columns, getValue])
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -120,7 +120,7 @@ export function DataTable<T extends Record<string, unknown>>({
       }
       return bStr.localeCompare(aStr)
     })
-  }, [filteredData, sortKey, sortDirection])
+  }, [filteredData, sortKey, sortDirection, getValue])
 
   // Paginate data
   const totalPages = Math.ceil(sortedData.length / pageSize)

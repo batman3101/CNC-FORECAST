@@ -32,7 +32,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(./CNC_Forecast.exe)"
+      "Bash(./CNC_Forecast.exe)",
+      "Bash(powershell -Command:*)",
+      "Bash(pyinstaller:*)"
     ],
     "deny": [],
     "ask": []

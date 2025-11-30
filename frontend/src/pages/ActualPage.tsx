@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { getActualRecords, createActualRecord, deleteActualRecord, getPrices } from '@/lib/api'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { getActualRecords, createActualRecord, deleteActualRecord, getPrices, getForecastModelsProcesses } from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { ActualRecord, PriceItem } from '@/types'
+
+const DEFAULT_PROCESS_OPTIONS = ['CNC 1 ~ CNC 2', 'CL1 ~ CL2', 'TRI']
 
 export function ActualPage() {
   const queryClient = useQueryClient()
@@ -19,12 +22,6 @@ export function ActualPage() {
     quantity: '',
   })
 
-  const processOptions = [
-    { value: 'CNC 1 ~ CNC 2', label: 'CNC 1 ~ CNC 2' },
-    { value: 'CL1 ~ CL2', label: 'CL1 ~ CL2' },
-    { value: 'TRI', label: 'TRI' },
-  ]
-
   const { data: records = [] } = useQuery({
     queryKey: ['actual-records'],
     queryFn: () => getActualRecords({ start_date: today }),
@@ -34,6 +31,26 @@ export function ActualPage() {
     queryKey: ['prices'],
     queryFn: getPrices,
   })
+
+  const { data: forecastData } = useQuery({
+    queryKey: ['forecast-models-processes'],
+    queryFn: getForecastModelsProcesses,
+  })
+
+  // Combine price master models with forecast models (unique, sorted)
+  const combinedModels = useMemo(() => {
+    const priceModels = pricesData?.items?.map((item: PriceItem) => item.model) || []
+    const forecastModels = forecastData?.models || []
+    const allModels = [...new Set([...priceModels, ...forecastModels])]
+    return allModels.sort()
+  }, [pricesData?.items, forecastData?.models])
+
+  // Combine default process options with forecast processes (unique, sorted)
+  const combinedProcesses = useMemo(() => {
+    const forecastProcesses = forecastData?.processes || []
+    const allProcesses = [...new Set([...DEFAULT_PROCESS_OPTIONS, ...forecastProcesses])]
+    return allProcesses.sort()
+  }, [forecastData?.processes])
 
   const createMutation = useMutation({
     mutationFn: createActualRecord,
@@ -89,18 +106,14 @@ export function ActualPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">모델</label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm [&>option]:bg-background [&>option]:text-foreground"
+                <SearchableSelect
+                  options={combinedModels}
                   value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                >
-                  <option value="">모델 선택</option>
-                  {pricesData?.items.map((item: PriceItem) => (
-                    <option key={item.model} value={item.model}>
-                      {item.model} ({formatCurrency(item.unit_price)})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, model: value })}
+                  placeholder="모델 선택"
+                  searchPlaceholder="모델 검색..."
+                  emptyMessage="모델을 찾을 수 없습니다"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">공정</label>
@@ -110,9 +123,9 @@ export function ActualPage() {
                   onChange={(e) => setFormData({ ...formData, process: e.target.value })}
                 >
                   <option value="">공정 선택</option>
-                  {processOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  {combinedProcesses.map((process) => (
+                    <option key={process} value={process}>
+                      {process}
                     </option>
                   ))}
                 </select>

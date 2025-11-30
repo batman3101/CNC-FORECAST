@@ -37,10 +37,12 @@ export function ReportPage() {
     queryFn: getPrices,
   })
 
-  const priceMap = prices?.items?.reduce((acc: Record<string, number>, p: { model: string; unit_price: number }) => {
-    acc[p.model] = p.unit_price
-    return acc
-  }, {}) || {}
+  const priceMap = useMemo(() => {
+    return prices?.items?.reduce((acc: Record<string, number>, p: { model: string; unit_price: number }) => {
+      acc[p.model] = p.unit_price
+      return acc
+    }, {}) || {}
+  }, [prices?.items])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

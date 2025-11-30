@@ -2,14 +2,33 @@ from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, distinct
 
 from app.core.database import get_history_db
-from app.models.actual_models import ActualRecord
+from app.models.actual_models import ActualRecord, ForecastSnapshot
 from app.models.schemas import ActualRecordCreate, ActualRecordResponse
 from app.services.price_service import price_service
 
 router = APIRouter()
+
+
+@router.get("/models-processes")
+async def get_forecast_models_processes(
+    db: Session = Depends(get_history_db)
+):
+    """Forecast에서 등록된 고유 모델과 공정 목록 조회"""
+    # Forecast에서 고유 모델 조회
+    forecast_models = db.query(distinct(ForecastSnapshot.model)).all()
+    models = sorted([m[0] for m in forecast_models if m[0]])
+
+    # Forecast에서 고유 공정 조회
+    forecast_processes = db.query(distinct(ForecastSnapshot.process)).all()
+    processes = sorted([p[0] for p in forecast_processes if p[0]])
+
+    return {
+        "models": models,
+        "processes": processes
+    }
 
 
 @router.get("", response_model=List[ActualRecordResponse])

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from typing import List, Optional
 from pydantic import BaseModel
 import pandas as pd
@@ -96,11 +96,15 @@ async def download_template():
         instructions.to_excel(writer, index=False, sheet_name='사용방법', header=False)
 
     output.seek(0)
+    content = output.getvalue()
 
-    return StreamingResponse(
-        output,
+    return Response(
+        content=content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=price_template.xlsx"}
+        headers={
+            "Content-Disposition": "attachment; filename=price_template.xlsx",
+            "Content-Length": str(len(content))
+        }
     )
 
 

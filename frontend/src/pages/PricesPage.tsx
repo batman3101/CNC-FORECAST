@@ -1,10 +1,10 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { getPrices, addPrice, deletePrice, downloadPriceTemplate, validatePriceUpload, bulkRegisterPrices } from '@/lib/api'
+import { getPrices, addPrice, deletePrice, validatePriceUpload, bulkRegisterPrices } from '@/lib/api'
 import { Database, Plus, Trash2, DollarSign, X, Edit, Download, Upload, CheckCircle, XCircle, AlertCircle, FileSpreadsheet } from 'lucide-react'
 
 const processFilterOptions = ['CNC 1 ~ CNC 2', 'CL1 ~ CL2', 'TRI']
@@ -97,19 +97,19 @@ export function PricesPage() {
     addMutation.mutate({ model: newModel.trim(), process: newProcess, price: Number(newPrice) })
   }
 
-  const handleDelete = (model: string, process: string) => {
+  const handleDelete = useCallback((model: string, process: string) => {
     if (window.confirm(`"${model}" (${process || '공정 없음'}) 단가를 삭제하시겠습니까?`)) {
       deleteMutation.mutate({ model, process })
     }
-  }
+  }, [deleteMutation])
 
-  const openEditModal = (price: Price) => {
+  const openEditModal = useCallback((price: Price) => {
     setEditingPrice(price)
     setEditModel(price.model)
     setEditProcess(price.process || '')
     setEditUnitPrice(String(price.unit_price))
     setIsEditModalOpen(true)
-  }
+  }, [])
 
   const closeEditModal = () => {
     setIsEditModalOpen(false)
@@ -131,12 +131,16 @@ export function PricesPage() {
   // Bulk upload handlers
   const handleTemplateDownload = async () => {
     try {
-      const blob = await downloadPriceTemplate()
+      const response = await fetch('/api/prices/template/download')
+      if (!response.ok) throw new Error('Download failed')
+      const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = 'price_template.xlsx'
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Template download failed:', error)
@@ -261,7 +265,7 @@ export function PricesPage() {
         </div>
       ),
     },
-  ], [deleteMutation.isPending])
+  ], [deleteMutation.isPending, handleDelete, openEditModal])
 
   return (
     <div className="space-y-6">
