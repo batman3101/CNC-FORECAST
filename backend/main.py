@@ -185,7 +185,7 @@ if __name__ == "__main__":
     import threading
 
     # 포터블 모드에서 브라우저 자동 열기
-    if STATIC_MODE:
+    if STATIC_MODE or getattr(sys, 'frozen', False):
         def open_browser():
             import time
             time.sleep(1.5)
@@ -193,9 +193,18 @@ if __name__ == "__main__":
 
         threading.Thread(target=open_browser, daemon=True).start()
 
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=not getattr(sys, 'frozen', False)  # 패키징 시 reload 비활성화
-    )
+    # PyInstaller 패키징 시 app 객체 직접 전달 (문자열 import 불가)
+    if getattr(sys, 'frozen', False):
+        uvicorn.run(
+            app,
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=False
+        )
+    else:
+        uvicorn.run(
+            "main:app",
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=True
+        )
