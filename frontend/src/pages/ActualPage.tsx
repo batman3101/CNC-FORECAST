@@ -20,11 +20,9 @@ export function ActualPage() {
   })
 
   const processOptions = [
-    { value: 'SMT', label: 'SMT' },
-    { value: 'DIP', label: 'DIP' },
-    { value: 'ASSY', label: 'ASSY' },
-    { value: 'TEST', label: 'TEST' },
-    { value: 'PACK', label: 'PACK' },
+    { value: 'CNC 1 ~ CNC 2', label: 'CNC 1 ~ CNC 2' },
+    { value: 'CL1 ~ CL2', label: 'CL1 ~ CL2' },
+    { value: 'TRI', label: 'TRI' },
   ]
 
   const { data: records = [] } = useQuery({
@@ -92,7 +90,7 @@ export function ActualPage() {
               <div>
                 <label className="text-sm font-medium">모델</label>
                 <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm [&>option]:bg-background [&>option]:text-foreground"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                 >
@@ -107,7 +105,7 @@ export function ActualPage() {
               <div>
                 <label className="text-sm font-medium">공정</label>
                 <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm [&>option]:bg-background [&>option]:text-foreground"
                   value={formData.process}
                   onChange={(e) => setFormData({ ...formData, process: e.target.value })}
                 >
