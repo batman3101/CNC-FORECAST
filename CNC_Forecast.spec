@@ -1,71 +1,29 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
 
-import sys
-from pathlib import Path
+datas = [('frontend/dist', 'static'), ('backend/app', 'app')]
+binaries = []
+hiddenimports = ['uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto', 'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan', 'uvicorn.lifespan.on', 'google.generativeai', 'PIL', 'pandas', 'openpyxl', 'app', 'app.api', 'app.api.routes', 'app.core', 'app.models', 'app.services']
+tmp_ret = collect_all('google.generativeai')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('google.ai')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
-block_cipher = None
-
-# 프로젝트 경로
-backend_dir = Path(r'C:\WORK\app_management\CNC FORECAST\backend')
-
-# 데이터 파일 수집
-datas = [
-    # 정적 파일 (빌드된 프론트엔드)
-    (str(backend_dir / 'static'), 'static'),
-    # 데이터 폴더 구조
-    (str(backend_dir / 'data'), 'data'),
-    # .env 파일 (있으면)
-]
-
-# .env 파일 추가 (있는 경우)
-env_file = backend_dir / '.env'
-if env_file.exists():
-    datas.append((str(env_file), '.'))
 
 a = Analysis(
-    [str(backend_dir / 'main.py')],
-    pathex=[str(backend_dir)],
-    binaries=[],
+    ['start.py', 'backend/main.py'],
+    pathex=['backend'],
+    binaries=binaries,
     datas=datas,
-    hiddenimports=[
-        'uvicorn.logging',
-        'uvicorn.protocols.http',
-        'uvicorn.protocols.http.auto',
-        'uvicorn.protocols.http.h11_impl',
-        'uvicorn.protocols.websockets',
-        'uvicorn.protocols.websockets.auto',
-        'uvicorn.lifespan',
-        'uvicorn.lifespan.on',
-        'app',
-        'app.api',
-        'app.api.routes',
-        'app.core',
-        'app.core.config',
-        'app.core.database',
-        'app.models',
-        'app.models.actual_models',
-        'app.models.template_models',
-        'app.services',
-        'app.services.excel_service',
-        'app.services.llm_service',
-        'google.generativeai',
-        'PIL',
-        'openpyxl',
-        'sqlalchemy',
-        'pydantic',
-        'pydantic_settings',
-    ],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
+    optimize=0,
 )
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
@@ -77,19 +35,16 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,  # 콘솔 창 표시 (디버깅용, 나중에 False로 변경 가능)
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # 아이콘 파일 경로 지정 가능
 )
-
 coll = COLLECT(
     exe,
     a.binaries,
-    a.zipfiles,
     a.datas,
     strip=False,
     upx=True,

@@ -53,11 +53,11 @@ async def get_revenue_report(
         latest_upload = db.query(func.max(ForecastSnapshot.upload_date)).scalar()
 
         if latest_upload:
+            # 사용자가 선택한 기간의 모든 forecast 데이터 조회
             forecast_records = db.query(ForecastSnapshot).filter(
                 ForecastSnapshot.upload_date == latest_upload,
                 ForecastSnapshot.forecast_date >= start_date,
-                ForecastSnapshot.forecast_date <= end_date,
-                ForecastSnapshot.forecast_date > today  # 미래 날짜만
+                ForecastSnapshot.forecast_date <= end_date
             ).all()
 
             for record in forecast_records:
@@ -144,3 +144,46 @@ async def export_report(
     """리포트 Excel 내보내기"""
     # 구현 예정
     return {"message": "Export 기능은 추후 구현 예정입니다"}
+
+
+@router.get("/debug/db-info")
+async def get_db_info(db: Session = Depends(get_history_db)):
+    """DB 저장 데이터 정보 조회 (디버그용)"""
+    # Forecast 데이터 정보
+    forecast_count = db.query(func.count(ForecastSnapshot.id)).scalar() or 0
+    forecast_min_date = db.query(func.min(ForecastSnapshot.forecast_date)).scalar()
+    forecast_max_date = db.query(func.max(ForecastSnapshot.forecast_date)).scalar()
+    latest_upload = db.query(func.max(ForecastSnapshot.upload_date)).scalar()
+
+    # 최근 업로드의 날짜 범위
+    latest_forecast_dates = []
+    if latest_upload:
+        dates = db.query(ForecastSnapshot.forecast_date).filter(
+            ForecastSnapshot.upload_date == latest_upload
+        ).distinct().order_by(ForecastSnapshot.forecast_date).all()
+        latest_forecast_dates = [str(d[0]) for d in dates]
+
+    # Actual 데이터 정보
+    actual_count = db.query(func.count(ActualRecord.id)).scalar() or 0
+    actual_min_date = db.query(func.min(ActualRecord.date)).scalar()
+    actual_max_date = db.query(func.max(ActualRecord.date)).scalar()
+
+    return {
+        "forecast": {
+            "total_count": forecast_count,
+            "date_range": {
+                "min": str(forecast_min_date) if forecast_min_date else None,
+                "max": str(forecast_max_date) if forecast_max_date else None
+            },
+            "latest_upload_date": str(latest_upload) if latest_upload else None,
+            "latest_upload_forecast_dates": latest_forecast_dates
+        },
+        "actual": {
+            "total_count": actual_count,
+            "date_range": {
+                "min": str(actual_min_date) if actual_min_date else None,
+                "max": str(actual_max_date) if actual_max_date else None
+            }
+        },
+        "today": str(date.today())
+    }

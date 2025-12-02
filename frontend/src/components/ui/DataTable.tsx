@@ -18,7 +18,8 @@ export interface Column<T> {
   header: string
   sortable?: boolean
   filterable?: boolean
-  filterOptions?: string[]
+  filterType?: 'text' | 'select' | 'date' | 'dateRange'  // 필터 타입
+  filterOptions?: string[]  // select 타입일 때 옵션 목록
   render?: (value: unknown, row: T, index: number) => ReactNode
   align?: 'left' | 'center' | 'right'
   width?: string
@@ -52,6 +53,7 @@ export function DataTable<T extends Record<string, unknown>>({
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [dateFilters, setDateFilters] = useState<Record<string, { start?: string; end?: string }>>({})
 
   // Get value from nested key like "user.name"
   const getValue = useCallback((row: T, key: string): unknown => {
@@ -82,18 +84,39 @@ export function DataTable<T extends Record<string, unknown>>({
       )
     }
 
-    // Column filters
+    // Column filters (text and select)
     Object.entries(columnFilters).forEach(([key, filterValue]) => {
       if (filterValue) {
+        // 해당 컬럼의 필터 타입 확인
+        const col = columns.find(c => String(c.key) === key)
+        const isSelectFilter = col?.filterType === 'select' || col?.filterOptions
+
         result = result.filter((row) => {
           const value = getValue(row, key)
+          if (isSelectFilter) {
+            // 드롭다운 필터는 정확히 일치
+            return String(value ?? '') === filterValue
+          }
+          // 텍스트 필터는 포함 검색
           return String(value ?? '').toLowerCase().includes(filterValue.toLowerCase())
         })
       }
     })
 
+    // Date filters
+    Object.entries(dateFilters).forEach(([key, { start, end }]) => {
+      if (start || end) {
+        result = result.filter((row) => {
+          const value = String(getValue(row, key) ?? '')
+          if (start && value < start) return false
+          if (end && value > end) return false
+          return true
+        })
+      }
+    })
+
     return result
-  }, [data, searchTerm, columnFilters, columns, getValue])
+  }, [data, searchTerm, columnFilters, dateFilters, columns, getValue])
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -154,16 +177,31 @@ export function DataTable<T extends Record<string, unknown>>({
     setCurrentPage(1)
   }
 
+  // Handle date filter change
+  const handleDateFilterChange = (key: string, type: 'start' | 'end', value: string) => {
+    setDateFilters((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [type]: value,
+      },
+    }))
+    setCurrentPage(1)
+  }
+
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('')
     setColumnFilters({})
+    setDateFilters({})
     setSortKey(null)
     setSortDirection(null)
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = searchTerm || Object.values(columnFilters).some(Boolean)
+  const hasActiveFilters = searchTerm ||
+    Object.values(columnFilters).some(Boolean) ||
+    Object.values(dateFilters).some(df => df.start || df.end)
 
   // Render sort icon
   const renderSortIcon = (key: string) => {
@@ -229,7 +267,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       {col.sortable !== false && renderSortIcon(String(col.key))}
                     </div>
                     {col.filterable && (
-                      col.filterOptions ? (
+                      col.filterType === 'select' || col.filterOptions ? (
                         <select
                           className="w-full h-7 text-xs rounded border border-input bg-background px-2"
                           value={columnFilters[String(col.key)] || ''}
@@ -237,10 +275,33 @@ export function DataTable<T extends Record<string, unknown>>({
                           onClick={(e) => e.stopPropagation()}
                         >
                           <option value="">전체</option>
-                          {col.filterOptions.map((opt) => (
+                          {col.filterOptions?.map((opt) => (
                             <option key={opt} value={opt}>{opt}</option>
                           ))}
                         </select>
+                      ) : col.filterType === 'date' ? (
+                        <Input
+                          type="date"
+                          className="h-7 text-xs"
+                          value={dateFilters[String(col.key)]?.start || ''}
+                          onChange={(e) => handleDateFilterChange(String(col.key), 'start', e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : col.filterType === 'dateRange' ? (
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Input
+                            type="date"
+                            className="h-7 text-xs flex-1"
+                            value={dateFilters[String(col.key)]?.start || ''}
+                            onChange={(e) => handleDateFilterChange(String(col.key), 'start', e.target.value)}
+                          />
+                          <Input
+                            type="date"
+                            className="h-7 text-xs flex-1"
+                            value={dateFilters[String(col.key)]?.end || ''}
+                            onChange={(e) => handleDateFilterChange(String(col.key), 'end', e.target.value)}
+                          />
+                        </div>
                       ) : (
                         <Input
                           className="h-7 text-xs"

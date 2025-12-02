@@ -165,7 +165,7 @@ async def save_forecast(
 ):
     """Forecast 데이터 저장 (Upsert: 같은 날 업로드시 기존 데이터 업데이트)
 
-    주의: 업로드 날짜 이전의 forecast 데이터는 저장하지 않음 (과거 데이터 보존)
+    주의: 업로드 날짜 이전의 forecast 데이터는 저장하지 않음 (과거는 실적 데이터 사용)
     """
     today = date.today()
     created_count = 0
@@ -173,13 +173,13 @@ async def save_forecast(
     skipped_count = 0
 
     for item in request.items:
-        # 업로드 날짜 이전의 데이터는 스킵 (과거 forecast 보존)
+        # 업로드 날짜 이전의 데이터는 스킵 (과거는 실적 데이터 사용)
         if item.forecast_date < today:
             skipped_count += 1
             continue
 
-        # 단가 조회
-        unit_price = price_service.get_price(item.model)
+        # 단가 조회 (model + process 조합)
+        unit_price = price_service.get_price(item.model, item.process or "")
         if unit_price is None:
             unit_price = 0  # 단가 없으면 0으로 설정
 
